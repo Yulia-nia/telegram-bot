@@ -1,57 +1,80 @@
 import math
+import operator
+
+OPERATORS = {
+    '-': operator.sub,
+    '+': operator.add,
+    '*': operator.mul,
+    '/': operator.truediv,
+    '^': operator.pow,
+}
+
+MATH_FUNCS = {
+    'sin': math.sin,
+    'cos': math.cos,
+    'tg': math.tan,
+    'ln': math.log,
+    'fact': math.factorial,
+    'exp': math.exp
+}
 
 
-def add(first, second):
-    return first + second
+def calc_logic(token):
+    try:
+        return float(token)
+    except ValueError:
+        begin = token.find('(')
+        if begin == 0 and token[-1] == ')':
+            return parse(token[1:-1])
+
+        elif begin > 0 and token[-1] == ')':
+            name = token[0:begin]
+            arg = parse(token[begin+1: -1])
+            result = MATH_FUNCS[name](arg)
+            return result
+        else:
+            raise ValueError(f'Unknown token {repr(token)}')
 
 
-def sub(first, second):
-    return first - second
+def parse(text):
+    token = ''
+    depth = 0
+    current_operator = None
+    current_value = None
 
+    def close_token():
+        nonlocal token, current_operator, current_value
+        if token != '':
+            if current_value is None:
+                current_value = calc_logic(token)
+            else:
+                current_value = OPERATORS[current_operator](current_value, calc_logic(token))
+                current_operator = None
+            token = ''
 
-def mul(first, second):
-    return first * second
+    for item in text:
+        if depth > 0:
+            if item == ' ':
+                continue
+            token += item
+            if item == ')':
+                depth -= 1
+                close_token()
 
+        elif item == '(':
+            if token == '':
+                close_token()
+            depth += 1
+            token += item
 
-def div(first, second):
-    return first // second
+        else:
+            if item == ' ':
+                continue
+            elif item in OPERATORS:
+                close_token()
+                current_operator = item
+            else:
+                token += item
 
-
-def cos(float_):
-    return math.cos(float_)
-
-
-def sin(float_):
-    return math.sin(float_)
-
-
-def tg(float_):
-    return math.tan(float_)
-
-
-def tan(float_):
-    return math.tan(float_)
-
-
-def ln(float_):
-    return math.log(float_)
-
-
-def log(base, float_):
-    return math.log(float_, base)
-
-
-def lg(float_):
-    return math.log10(float_)
-
-
-def log2(float_):
-    return math.log2(float_)
-
-
-def fact(float_):
-    return math.factorial(float_)
-
-
-def exp(float_):
-    return math.exp(float_)
+    close_token()
+    return current_value
